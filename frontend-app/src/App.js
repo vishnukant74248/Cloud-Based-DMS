@@ -5,7 +5,7 @@ import { io } from 'socket.io-client';
 const BACKEND_URL = "http://localhost:5005";
 
 function App() {
-  // Authentication States (Naya Form ke liye)
+  // Authentication States
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -37,19 +37,34 @@ function App() {
     }
   }, [documentId, isLoggedIn]);
 
-  // Handle New Login / Registration Submit
+  // ==========================================
+  // ASALI POSTGRESQL DATABASE LOGIN SUBMIT
+  // ==========================================
   const handleAuthSubmit = async (e) => {
     e.preventDefault();
     if (!email || !password) return alert("Please fill Email and Password!");
     
     try {
-      // Abhi testing ke liye hum token fetch kar rahe hain aur user ko login kar rahe hain
-      const res = await axios.get(`${BACKEND_URL}/api/test-token`);
-      setToken(res.data.token);
-      setIsLoggedIn(true);
-      alert(`Welcome ${name || 'User'}! Authentication Successful.`);
+      // 🌐 Backend ke real login endpoint par request bhej rahe hain
+      const response = await axios.post(`${BACKEND_URL}/api/auth/login`, {
+        email: email,
+        password: password
+      });
+
+      if (response.data.success) {
+        setToken(response.data.token);
+        setName(response.data.user.name); // Database se user ka asli naam uthayega
+        setIsLoggedIn(true);
+        alert(`Welcome ${response.data.user.name}! Database Authentication Successful. 🎉`);
+      }
     } catch (err) {
-      alert("Error connecting to server. Make sure backend is running on port 5005");
+      console.error(err);
+      // Agar backend se koi error message aata hai (jaise Wrong Password)
+      if (err.response && err.response.data && err.response.data.error) {
+        alert(`❌ Login Failed: ${err.response.data.error}`);
+      } else {
+        alert("Error connecting to server. Make sure backend is running on port 5005");
+      }
     }
   };
 
@@ -81,7 +96,11 @@ function App() {
       }
     } catch (err) {
       console.error(err);
-      alert("Upload error.");
+      if (err.response && err.response.data && err.response.data.error) {
+        alert(`❌ Upload Error: ${err.response.data.error}`);
+      } else {
+        alert("Upload error.");
+      }
     }
   };
 
@@ -111,10 +130,6 @@ function App() {
         <div style={{ margin: '20px 0', padding: '20px', background: '#f9f9f9', border: '1px solid #ccc', borderRadius: '8px' }}>
           <h3>🔐 User Login / Registration</h3>
           <form onSubmit={handleAuthSubmit}>
-            <div style={{ marginBottom: '12px' }}>
-              <label style={{ display: 'block', fontWeight: 'bold' }}>Full Name (Optional):</label>
-              <input type="text" placeholder="Vishnu Kant" value={name} onChange={(e) => setName(e.target.value)} style={{ width: '95%', padding: '8px', marginTop: '5px' }} />
-            </div>
             <div style={{ marginBottom: '12px' }}>
               <label style={{ display: 'block', fontWeight: 'bold' }}>Email Address:</label>
               <input type="email" placeholder="example@gmail.com" value={email} onChange={(e) => setEmail(e.target.value)} style={{ width: '95%', padding: '8px', marginTop: '5px' }} required />
